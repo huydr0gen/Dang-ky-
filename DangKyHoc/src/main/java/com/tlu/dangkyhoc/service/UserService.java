@@ -1,7 +1,6 @@
 package com.tlu.dangkyhoc.service;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -13,10 +12,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.http.HttpHeaders;
 
 import com.tlu.dangkyhoc.model.LoginResponse;
 import com.tlu.dangkyhoc.model.User;
@@ -51,10 +47,7 @@ public class UserService {
 	}
 
 	public LoginResponse authenticateUser(User user, HttpServletResponse response) throws IOException {
-		// TODO Auto-generated method stub
-		// lấy username và password từ form nhập xong so sánh với data trong file excel, 
-		// đúng thì chuyển route nhá, sai thì hiện thông báo chẳng hạn?
-		// sau cái file input stream đổi thành cho người ta chọn file nhé đừng để mặc định đường link như này
+		// sau cái file input stream đổi thành cho người ta chọn file
 		String username = user.getUsername();
 		String password = user.getPassword();
 		
