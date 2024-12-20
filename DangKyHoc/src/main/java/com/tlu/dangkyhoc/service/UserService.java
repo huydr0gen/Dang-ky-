@@ -5,44 +5,29 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-
-//import javax.swing.JOptionPane;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpHeaders;
 
+import com.tlu.dangkyhoc.model.LoginResponse;
 import com.tlu.dangkyhoc.model.User;
 
 import jakarta.servlet.http.HttpServletResponse;
 
+
 @Service
 public class UserService {
-	
-	// hàm thử
-	public String getExcelUserData() throws IOException {
-		try {
-			FileInputStream fis = new FileInputStream("D:\\JetBrains\\testApachePOI.xlsx");
-			try (Workbook workbook = new XSSFWorkbook(fis)) {
-				Sheet sheet = workbook.getSheetAt(2);
-				Row row = sheet.getRow(1);
-				Cell userCell = row.getCell(0);
-				Cell passCell = row.getCell(1);
-				return userCell.toString() + " - " + passCell.toString();
-			}
-			
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return "";
-		}
-	}
 
 	public void addNewUser(User user) throws IOException {
-		// TODO Auto-generated method stub
 		//lay username va password xong ghi vao file excel
 			FileInputStream fis = new FileInputStream("D:\\JetBrains\\testApachePOI.xlsx");
 			try (Workbook workbook = new XSSFWorkbook(fis)) {
@@ -65,7 +50,7 @@ public class UserService {
 			//return user;
 	}
 
-	public void authenticateUser(User user, HttpServletResponse response) throws IOException {
+	public LoginResponse authenticateUser(User user, HttpServletResponse response) throws IOException {
 		// TODO Auto-generated method stub
 		// lấy username và password từ form nhập xong so sánh với data trong file excel, 
 		// đúng thì chuyển route nhá, sai thì hiện thông báo chẳng hạn?
@@ -77,83 +62,81 @@ public class UserService {
 		boolean passwordMatchesUser = false;
 		
 		FileInputStream fis = new FileInputStream("D:\\JetBrains\\testApachePOI.xlsx");
-		Workbook workbook = new XSSFWorkbook(fis);
-		Sheet sheet = workbook.getSheetAt(2);
-		
-		for (int r = 1; r < sheet.getPhysicalNumberOfRows(); r++) {
-			Row row = sheet.getRow(r);
-			Cell userCell = row.getCell(0);
+		try (Workbook workbook = new XSSFWorkbook(fis)) {
+			Sheet sheet = workbook.getSheetAt(3);
 			
-			if (userCell.getStringCellValue().equals(username)) {
-				foundUser = true;
-				Cell passwordCell = row.getCell(1);
+			for (int r = 1; r < sheet.getPhysicalNumberOfRows(); r++) {
+				Row row = sheet.getRow(r);
+				String userCell = row.getCell(0).getStringCellValue();
 				
-				if (passwordCell.getStringCellValue().equals(password)) {
-					passwordMatchesUser = true;
-					break;
+				if (userCell.equals(username)) {
+					foundUser = true;
+					Cell passwordCell = row.getCell(1);
+					
+					if (passwordCell.getStringCellValue().equals(password)) {
+						passwordMatchesUser = true;
+						break;
+					}
 				}
 			}
 		}
-		
 		if (foundUser && passwordMatchesUser) {
-			//JOptionPane.showMessageDialog(null, "logged in");
-			response.sendRedirect("/home");
+			return new LoginResponse(true);
 		} else {
-			//JOptionPane.showMessageDialog(null, "invalid input");
+			return new LoginResponse(false);
 		}
-		FileOutputStream fos = new FileOutputStream("D:\\JetBrains\\testApachePOI.xlsx");
-		workbook.write(fos);
-		workbook.close();
 	}
 
 	public ArrayList<User> showAll() throws IOException {
 		ArrayList<User> users = new ArrayList<User>();
 		
 		FileInputStream fis = new FileInputStream("D:\\JetBrains\\testApachePOI.xlsx");
-		Workbook workbook = new XSSFWorkbook(fis);
-		Sheet sheet = workbook.getSheetAt(2); // sheet user
-		
-		for (int r = 1; r < sheet.getPhysicalNumberOfRows(); r++) {
-			Row row = sheet.getRow(r);
+		try (Workbook workbook = new XSSFWorkbook(fis)) {
+			Sheet sheet = workbook.getSheetAt(2); // sheet user
 			
-			String username = row.getCell(0).getStringCellValue();
-			String password = row.getCell(1).getStringCellValue();
-			
-			users.add(new User(username, password));
-		}
-		
-		workbook.close();
-		fis.close();
-		return users;
-	}
-
-	public ArrayList<String> listOfEquivalentCourses(String maMon) throws IOException {
-		
-		ArrayList<String> courses = new ArrayList<String>();
-		courses.add(maMon);
-		
-		FileInputStream fis = new FileInputStream("D:\\JetBrains\\testApachePOI.xlsx");
-		Workbook workbook = new XSSFWorkbook(fis);
-		Sheet sheet = workbook.getSheetAt(0); // sheet chuong trinh dao tao
-		// mặc định để tương đương của môn đầu tiên
-		// môn tương đương chỉ cần dùng split ký tự 
-		
-		for (int r = 1; r < sheet.getPhysicalNumberOfRows(); r++) {
-			Row row = sheet.getRow(r);
-			String courseName = row.getCell(1).getStringCellValue();
-			
-			if (courseName.equals(maMon)) {
-				String sameCourse = row.getCell(5).getStringCellValue();
-				String[] courseSplited = sameCourse.split("/");
-				for (String part : courseSplited) {
-					courses.add(part);
-				}
+			for (int r = 1; r < sheet.getPhysicalNumberOfRows(); r++) {
+				Row row = sheet.getRow(r);
+				
+				String username = row.getCell(0).getStringCellValue();
+				String password = row.getCell(1).getStringCellValue();
+				
+				users.add(new User(username, password));
 			}
 		}
 		
-		workbook.close();
-		fis.close();
+		return users;
+	}
+	
+	public void splitCourseCondition(Row row, String maMon,  ArrayList<String> courses) {
+		String sameCourse = row.getCell(5).getStringCellValue();
+		String[] courseSplited = sameCourse.split("/");
+		for (String part : courseSplited) {
+			courses.add(part);
+		}
+	}
+
+	//môn tương đương
+	public ArrayList<String> listOfEquivalentCourses(String maMon) throws IOException {
 		
+		ArrayList<String> courses = new ArrayList<String>();
+		
+		FileInputStream fis = new FileInputStream("D:\\JetBrains\\testApachePOI.xlsx");
+		try (Workbook workbook = new XSSFWorkbook(fis)) {
+			Sheet sheet = workbook.getSheetAt(0); // sheet chuong trinh dao tao
+			
+			for (int r = 1; r < sheet.getPhysicalNumberOfRows(); r++) {
+				Row row = sheet.getRow(r);
+				String courseName = row.getCell(1).getStringCellValue();
+				if (courseName.equals(maMon)) {
+					if (row.getCell(5) != null) {
+						splitCourseCondition(row, maMon, courses);
+					} else {
+						return courses;
+					}
+				}
+				
+			}
+		}
 		return courses;
 	}
 
@@ -188,24 +171,70 @@ public class UserService {
 		}
 	}
 	
+	//hàm lấy số tín từ excel
+	public int getStudentCreditsFromExcel(String msv) throws IOException {
+		try (FileInputStream fis = new FileInputStream("D:\\JetBrains\\testApachePOI.xlsx");
+			Workbook workbook = new XSSFWorkbook(fis)) {
+			Sheet sheet = workbook.getSheetAt(2);
+			
+			
+			for (int r = 1; r < sheet.getPhysicalNumberOfRows(); r++) {
+				Row row = sheet.getRow(r);
+				String cellMSV = row.getCell(1).getStringCellValue();
+				
+				if (cellMSV.equals(msv)) {
+					return (int) row.getCell(3).getNumericCellValue();
+				} 
+			}
+		}
+		
+		return 0;
+	}
+	
 	//kiểm tra số tín
+	public boolean extractCredits(String dktq, int tinchi) {
+		String regex = "(>?|>=?)\\s*(\\d+)\\s*tín\\s*chỉ";
+		Pattern pattern = Pattern.compile(regex);
+		Matcher matcher = pattern.matcher(dktq.trim());
+		
+		if (matcher.find()) {
+			String operator = matcher.group(1).trim();
+			int credits = Integer.parseInt(matcher.group(2));
+			
+			switch (operator) {
+				case ">":
+					return tinchi > credits;
+				case ">=":
+					return tinchi >= credits;
+				default:
+					return tinchi >= credits;
+			}
+		}
+		return false;
+	}
+	
 
 	// phân loại điều kiện tiên quyết
 	public void processPrerequisiteCourses (Row row, ArrayList<String> requiredEnroll, ArrayList<String> optionalEnroll) {
-		String cellPrerequisiteCourses = row.getCell(4).getStringCellValue();
-		if (cellPrerequisiteCourses != null) {
-			if (cellPrerequisiteCourses.contains("/")) {
-				String[] optional = cellPrerequisiteCourses.split("/");
-				
-				for (String course : optional) {
-					optionalEnroll.add(course);
-				}
-			} else {
-				String[] must = cellPrerequisiteCourses.split(",");
+		String cellPrerequisiteCourses;
+		
+		if (row.getCell(4) != null) {
+			cellPrerequisiteCourses = row.getCell(4).getStringCellValue();
+		} else {
+			return;
+		}
+		
+		if (cellPrerequisiteCourses.contains("/")) {
+			String[] optional = cellPrerequisiteCourses.split("/");
 			
-				for (String course : must) {
-					requiredEnroll.add(course);
-				}
+			for (String course : optional) {
+				optionalEnroll.add(course);
+			}
+		} else {
+			String[] must = cellPrerequisiteCourses.split(",");
+		
+			for (String course : must) {
+				requiredEnroll.add(course);
 			}
 		}
 	}
@@ -214,6 +243,8 @@ public class UserService {
 	public ArrayList<ArrayList<String>> checkForPrerequisiteCourses(String maMon) throws IOException {
 		ArrayList<String> requiredEnroll = new ArrayList<>();
 		ArrayList<String> optionalEnroll = new ArrayList<>();
+		
+		ArrayList<ArrayList<String>> prerequisiteCourses = new ArrayList<ArrayList<String>>();
 		
 		FileInputStream fis = new FileInputStream("D:\\JetBrains\\testApachePOI.xlsx");
 		try (Workbook workbook = new XSSFWorkbook(fis)) {
@@ -253,7 +284,6 @@ public class UserService {
 			requiredEnroll = newRequiredEnroll;
 		}
 		
-		ArrayList<ArrayList<String>> prerequisiteCourses = new ArrayList<ArrayList<String>>();
 		prerequisiteCourses.add(requiredEnroll);
 		prerequisiteCourses.add(optionalEnroll);
 		return prerequisiteCourses;
@@ -263,13 +293,14 @@ public class UserService {
 	// kiểm tra điểm của các môn trong điều kiện tiên quyết
 	// true = được đăng ký môn này
 	// false = không được đăng ký
-	public boolean checkForCoursePassed(String msv, String maMon) throws IOException {
+	public boolean checkCompletedPrerequisite(String msv, String maMon) throws IOException {
 		ArrayList<ArrayList<String>> dieuKienTienQuyet = checkForPrerequisiteCourses(maMon);
 		ArrayList<String> requiredCourse = dieuKienTienQuyet.get(0);
 		ArrayList<String> optionalCourse = dieuKienTienQuyet.get(1);
 		
+		
 		if (requiredCourse.isEmpty() && optionalCourse.isEmpty()) {
-			return true;
+			return true; // không có điều kiện tiên quyết thì được đăng ký
 		}
 			
 		if (requiredCourse.isEmpty()) {
@@ -288,16 +319,24 @@ public class UserService {
 			}
 		}
 		
-		if (duocDangKy(msv, requiredCourse.get(1)) == false) {
+		if (isCourseGraded(msv, requiredCourse.get(1)) == false) {
 			return false;
 		}
 		
-		if (duocDangKy(msv, requiredCourse.get(1)) == true && duocDangKy(msv, requiredCourse.get(0)) == false) {
-			for (String course : optionalCourse) {
-				if (duocDangKy(msv, course) == true) {
+		if (isCourseGraded(msv, requiredCourse.get(1)) == true) {
+			if (requiredCourse.get(0).contains("tín chỉ")) {
+				if (extractCredits(requiredCourse.get(0), getStudentCreditsFromExcel(msv)) == true) {
 					return true;
 				} else {
 					return false;
+				}
+			} else {
+				for (String course : optionalCourse) {
+					if (isCourseGraded(msv, course) == true) {
+						return true;
+					} else {
+						return false;
+					}
 				}
 			}
 		} else {
@@ -310,7 +349,7 @@ public class UserService {
 	// tạo một hàm sử dụng được 2 hàm môn tương đương và điểm tổng kết
 	// true là đã có điểm
 	// false là chưa có điểm
-	public boolean duocDangKy(String msv, String maMon) throws IOException {
+	public boolean isCourseGraded(String msv, String maMon) throws IOException {
 		ArrayList<String> monTuongDuong = listOfEquivalentCourses(maMon);
 		monTuongDuong.add(maMon);
 		boolean hasGraded = false;
@@ -328,19 +367,13 @@ public class UserService {
 			return false;
 		}
 	}
-
-	public String confirmMessSend(String tn, String num) {
-		return sendMessage(tn, num);
-	}
-
-	public String sendMessage(String tinNhan, String number) {
-		if ("hello".equals(tinNhan)) {
-			ArrayList<String> thongDiep = new ArrayList<String>();
-			return "Đã nhận được thông điệp: " + tinNhan + " và số: " + number + " và số lượng: " + thongDiep.size();
+	
+	// tổng hợp 4 flag
+	public boolean checkRegistrationConditions(String msv, String maMon) throws IOException {
+		if (!isCourseGraded(msv, maMon) && checkCompletedPrerequisite(msv, maMon)) {
+			return true;
 		} else {
-			String[] xinchao = tinNhan.split(" ");
-			return xinchao[0];
+			return false;
 		}
 	}
 }
-

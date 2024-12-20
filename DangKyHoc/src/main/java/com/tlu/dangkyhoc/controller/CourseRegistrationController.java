@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,6 +15,7 @@ import com.tlu.dangkyhoc.model.User;
 import com.tlu.dangkyhoc.service.UserService;
 
 @RestController
+@CrossOrigin(origins = "http://localhost:3000")
 public class CourseRegistrationController {
 	
 	@Autowired
@@ -29,15 +31,12 @@ public class CourseRegistrationController {
 		return userservice.showAll();
 	}
 	
-	// controller này sẽ được gộp với một phương thức tổng, phần mapping sẽ được chỉnh lại cho đúng sau
 	@PostMapping("/home/course")
 	public ArrayList<String> monTuongDuong(@RequestBody Map<String, String> payload) throws IOException {
 		String maMon = payload.get("maMon");
 		return userservice.listOfEquivalentCourses(maMon);
 	}
 	
-	// controller này sẽ được gộp với một phương thức tổng, phần mapping sẽ được chỉnh lại cho đúng sau
-	// trả về kết quả dạng thông báo "được" hoặc "không"
 	@PostMapping("/home/result")
 	public boolean diemTK(@RequestBody Map<String, Object> payload) throws IOException {
 		String msv = (String) payload.get("msv");
@@ -49,7 +48,7 @@ public class CourseRegistrationController {
 	public boolean duocDangKy(@RequestBody Map<String, Object> payload) throws IOException {
 		String msv = (String) payload.get("msv");
 		String maMon = (String) payload.get("maMon");
-		return userservice.duocDangKy(msv, maMon);
+		return userservice.isCourseGraded(msv, maMon);
 	}
 	
 	@PostMapping("/home/dktq")
@@ -62,14 +61,15 @@ public class CourseRegistrationController {
 	public boolean isDieuKienTienQuyetPassed(@RequestBody Map<String, Object> payload) throws IOException {
 		String msv = (String) payload.get("msv");
 		String maMon = (String) payload.get("maMon");
-		return userservice.checkForCoursePassed(msv, maMon);
+		return userservice.checkCompletedPrerequisite(msv, maMon);
 	}
 	
-	// test chức năng mới
-	@PostMapping("/home/api/message")
-	public String message(@RequestBody Map<String, Object> payload) {
-		String tinNhan = (String) payload.get("message");
-		String number = (String) payload.get("number");
-		return userservice.confirmMessSend(tinNhan, number);
+	@PostMapping("home/register")
+	public boolean isRegisterAvailable(@RequestBody Map<String, String> payload) throws IOException {
+		String msv = (String) payload.get("msv");
+		String maMon = (String) payload.get("maMon");
+		
+		return userservice.checkRegistrationConditions(msv, maMon);
 	}
+	
 }
